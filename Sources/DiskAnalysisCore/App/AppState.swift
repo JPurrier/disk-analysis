@@ -72,6 +72,38 @@ public final class AppState {
         }
     }
 
+    public func selectVolume(_ volume: VolumeInfo) {
+        guard !isScanning else {
+            statusMessage = "Stop the current scan before changing volumes"
+            return
+        }
+        guard selectedVolume != volume || customTargetURL != nil else { return }
+
+        selectedVolume = volume
+        customTargetURL = nil
+        clearScanResults()
+        statusMessage = "Ready to scan " + volume.name
+    }
+
+    public func selectCustomFolder(_ url: URL) {
+        guard !isScanning else {
+            statusMessage = "Stop the current scan before changing targets"
+            return
+        }
+
+        customTargetURL = url
+        selectedVolume = nil
+        clearScanResults()
+        statusMessage = "Ready to scan " + url.path
+    }
+
+    public var activeTargetName: String {
+        if let customTargetURL {
+            return customTargetURL.lastPathComponent.isEmpty ? customTargetURL.path : customTargetURL.lastPathComponent
+        }
+        return selectedVolume?.name ?? activeTargetURL.path
+    }
+
     public var activeTargetURL: URL {
         if let custom = customTargetURL {
             return custom
@@ -196,5 +228,14 @@ public final class AppState {
 
     public func showInfo(for node: FileNode) {
         infoNode = node
+    }
+
+    private func clearScanResults() {
+        rootNode = nil
+        currentDrillDownNode = nil
+        selectedNode = nil
+        hoveredNode = nil
+        scanStats = ScanStatistics()
+        diskReport = DiskReport()
     }
 }

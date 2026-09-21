@@ -25,6 +25,7 @@ public actor DiskScannerEngine {
             currentPath: rootURL.path,
             startTime: Date()
         )
+        let rootDevice = scanner.deviceNumber(at: rootURL.path)
 
         var lastReportTime = Date()
 
@@ -48,6 +49,14 @@ public actor DiskScannerEngine {
                 if isCancelled { break }
 
                 let itemURL = dirURL.appendingPathComponent(entry.name)
+
+                if entry.isDirectory,
+                   !Self.shouldScanDirectory(
+                       rootDevice: rootDevice,
+                       directoryDevice: scanner.deviceNumber(at: itemURL.path)
+                   ) {
+                    continue
+                }
 
                 if entry.isDirectory && !entry.isPackage {
                     let dirNode = FileNode(
@@ -122,6 +131,12 @@ public actor DiskScannerEngine {
         onProgress(stats)
 
         return rootNode
+    }
+
+    static func shouldScanDirectory(rootDevice: Int64?, directoryDevice: Int64?) -> Bool {
+        guard let rootDevice else { return true }
+        guard let directoryDevice else { return false }
+        return rootDevice == directoryDevice
     }
 
     /// Fast recursive traversal to sum size of an application or library bundle

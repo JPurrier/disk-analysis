@@ -11,21 +11,21 @@ public struct VolumePickerView: View {
     public var body: some View {
         HStack(spacing: 8) {
             Menu {
-                Section("Mounted Volumes") {
-                    ForEach(state.availableVolumes) { volume in
-                        Button {
-                            state.selectedVolume = volume
-                            state.customTargetURL = nil
-                        } label: {
-                            HStack {
-                                Text(volume.name)
-                                if volume.isBootVolume {
-                                    Text("(System Boot)")
-                                }
-                                Spacer()
-                                Text(ByteCountFormatter.string(fromByteCount: volume.totalCapacity, countStyle: .file))
-                            }
-                        }
+                let internalVolumes = state.availableVolumes.filter { !$0.isExternal }
+                let externalVolumes = state.availableVolumes.filter(\.isExternal)
+
+                if !internalVolumes.isEmpty {
+                    Section("Internal Volumes") {
+                        volumeButtons(internalVolumes)
+                    }
+                }
+
+                if !externalVolumes.isEmpty {
+                    if !internalVolumes.isEmpty {
+                        Divider()
+                    }
+                    Section("External Volumes (scan separately)") {
+                        volumeButtons(externalVolumes)
                     }
                 }
 
@@ -128,8 +128,25 @@ public struct VolumePickerView: View {
         panel.message = "Select a folder or drive to analyse"
 
         if panel.runModal() == .OK, let url = panel.url {
-            state.customTargetURL = url
-            state.selectedVolume = nil
+            state.selectCustomFolder(url)
+        }
+    }
+
+    @ViewBuilder
+    private func volumeButtons(_ volumes: [VolumeInfo]) -> some View {
+        ForEach(volumes) { volume in
+            Button {
+                state.selectVolume(volume)
+            } label: {
+                HStack {
+                    Text(volume.name)
+                    if volume.isBootVolume {
+                        Text("(System Boot)")
+                    }
+                    Spacer()
+                    Text(ByteCountFormatter.string(fromByteCount: volume.totalCapacity, countStyle: .file))
+                }
+            }
         }
     }
 }

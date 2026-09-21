@@ -31,6 +31,12 @@ public final class DarwinBulkScanner: Sendable {
 
     public init() {}
 
+    func deviceNumber(at path: String) -> Int64? {
+        var statBuffer = stat()
+        guard stat(path, &statBuffer) == 0 else { return nil }
+        return Int64(statBuffer.st_dev)
+    }
+
     /// Reads directory entries using Darwin getattrlistbulk for maximum speed, with fallback to readdir/stat
     public func readDirectory(at path: String, treatPackagesAsFiles: Bool = true) -> [RawDirEntry] {
         var entries: [RawDirEntry] = []

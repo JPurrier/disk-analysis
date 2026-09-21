@@ -39,6 +39,16 @@ struct ScannerTests {
         #expect(rootNode.children.first(where: { $0.name == "SubFolder" })?.children.map(\.name) == ["test2.mp4"])
     }
 
+    @Test("DiskScannerEngine keeps mounted volumes as separate scan targets")
+    func testVolumeBoundary() {
+        #expect(DiskScannerEngine.shouldScanDirectory(rootDevice: 1, directoryDevice: 1))
+        #expect(!DiskScannerEngine.shouldScanDirectory(rootDevice: 1, directoryDevice: 2))
+        #expect(!DiskScannerEngine.shouldScanDirectory(rootDevice: 1, directoryDevice: nil))
+        #expect(DiskScannerEngine.shouldScanDirectory(rootDevice: nil, directoryDevice: 1))
+        #expect(DiskScannerEngine.shouldScanDirectory(rootDevice: -1, directoryDevice: -1))
+        #expect(!DiskScannerEngine.shouldScanDirectory(rootDevice: -1, directoryDevice: 1))
+    }
+
     @Test("DiskScannerEngine scans real system path with fast throughput")
     func testRealSystemScan() async throws {
         let targetURL = URL(fileURLWithPath: "/Library/Fonts")

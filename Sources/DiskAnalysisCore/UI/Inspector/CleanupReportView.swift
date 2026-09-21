@@ -20,7 +20,7 @@ public struct CleanupReportView: View {
                 }
 
                 if state.diskReport.totalItems > 0 {
-                    Text("\(state.diskReport.totalItems) items • \(formattedSize(state.diskReport.totalSize)) scanned")
+                    Text("\(state.activeTargetName): \(state.diskReport.totalItems) items • \(formattedSize(state.diskReport.totalSize)) scanned")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                     Text("Click an item to reveal it in Finder. Suggestions are for review, not automatic deletion.")
@@ -28,7 +28,7 @@ public struct CleanupReportView: View {
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
-                    Text(state.isScanning ? "Building report from the scan…" : "Run a scan to build the report.")
+                    Text(state.isScanning ? "Building report from the scan…" : "Scan \(state.activeTargetName) to build the report.")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }

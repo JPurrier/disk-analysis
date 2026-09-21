@@ -11,6 +11,10 @@ public struct VolumeInfo: Identifiable, Hashable, Sendable {
     public let isInternal: Bool
     public let fileSystemType: String
 
+    public var isExternal: Bool {
+        !isInternal || isRemovable
+    }
+
     public var usedCapacity: Int64 {
         max(0, totalCapacity - availableCapacity)
     }
