@@ -36,6 +36,12 @@ These screenshots use synthetic demo data and do not show a personal filesystem.
 - Swift 6 or later
 - No third-party dependencies
 
+## Download v1.0.0
+
+Download `DiskAnalysis-v1.0.0-macos.zip` from the [GitHub Releases page](https://github.com/JPurrier/disk-analysis/releases/latest). Unzip it, move `DiskAnalysis.app` to Applications, and open it.
+
+The release is ad-hoc signed and is not Apple-notarized. If macOS blocks the first launch, Control-click `DiskAnalysis.app`, choose **Open**, and confirm.
+
 ## Build and run
 
 Run the app from Swift Package Manager:
