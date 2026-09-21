@@ -18,6 +18,18 @@ The app reads local filesystem metadata. It has no network dependency or upload 
 - **Search and thresholds**: Filters by name or extension and offers `> 10 MB`, `> 100 MB`, `> 1 GB`, and `> 5 GB` thresholds.
 - **Trash-first cleanup**: Moves selected items to the macOS Trash only after confirmation. Protected system paths are blocked.
 
+## Screenshots
+
+These screenshots use synthetic demo data and do not show a personal filesystem.
+
+![Disk Analysis overview](docs/images/disk-analysis-overview.png)
+
+*Treemap and Smart Report overview.*
+
+![Disk Analysis hierarchy](docs/images/disk-analysis-hierarchy.png)
+
+*Expanded hierarchy with a generic archive review suggestion.*
+
 ## Requirements
 
 - macOS 14 or later
