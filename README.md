@@ -64,6 +64,8 @@ The source blocks cleanup below protected system locations, including `/`, `/Sys
 
 The app does not send scan results, filenames, paths, or file contents over the network. macOS may still show its own permission prompts when you access protected folders.
 
+Unreadable directories are skipped by the current scanner, so a scan can be incomplete without listing every permission failure. Treat results as an estimate unless the selected location is readable.
+
 ## Project structure
 
 ```

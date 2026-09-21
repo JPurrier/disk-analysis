@@ -1,6 +1,11 @@
 import Foundation
 
 public struct DiskReport {
+    private enum ReportIdentity: Hashable {
+        case filesystem(device: UInt64, inode: UInt64)
+        case path(String)
+    }
+
     public struct CleanupCandidate: Identifiable {
         public let node: FileNode
         public let reason: String
@@ -86,13 +91,31 @@ public struct DiskReport {
             visit(child)
         }
 
-        let largeFiles = leaves
-            .filter { $0.effectiveSize >= largeFileThreshold }
-            .sorted { $0.effectiveSize > $1.effectiveSize }
+        let largeFiles = deduplicated(
+            leaves.filter { $0.effectiveSize >= largeFileThreshold }
+        )
 
         let sortedCandidates = rawCandidates.sorted { $0.node.effectiveSize > $1.node.effectiveSize }
-        var cleanupCandidates: [CleanupCandidate] = []
+        var uniqueCandidates: [ReportIdentity: CleanupCandidate] = [:]
         for candidate in sortedCandidates {
+            let identity = reportIdentity(for: candidate.node)
+            if let existing = uniqueCandidates[identity] {
+                if shouldPrefer(candidate.node, over: existing.node) {
+                    uniqueCandidates[identity] = candidate
+                }
+            } else {
+                uniqueCandidates[identity] = candidate
+            }
+        }
+
+        let deduplicatedCandidates = uniqueCandidates.values.sorted {
+            if $0.node.effectiveSize != $1.node.effectiveSize {
+                return $0.node.effectiveSize > $1.node.effectiveSize
+            }
+            return $0.node.path < $1.node.path
+        }
+        var cleanupCandidates: [CleanupCandidate] = []
+        for candidate in deduplicatedCandidates {
             let isNested = cleanupCandidates.contains { existing in
                 candidate.node.path.hasPrefix(existing.node.path + "/")
             }
@@ -107,5 +130,58 @@ public struct DiskReport {
             largeFiles: largeFiles,
             cleanupCandidates: cleanupCandidates
         )
+    }
+
+    private static func deduplicated(_ nodes: [FileNode]) -> [FileNode] {
+        var uniqueNodes: [ReportIdentity: FileNode] = [:]
+        for node in nodes {
+            let identity = reportIdentity(for: node)
+            if let existing = uniqueNodes[identity] {
+                if shouldPrefer(node, over: existing) {
+                    uniqueNodes[identity] = node
+                }
+            } else {
+                uniqueNodes[identity] = node
+            }
+        }
+
+        return uniqueNodes.values.sorted {
+            if $0.effectiveSize != $1.effectiveSize {
+                return $0.effectiveSize > $1.effectiveSize
+            }
+            return $0.path < $1.path
+        }
+    }
+
+    private static func reportIdentity(for node: FileNode) -> ReportIdentity {
+        if let attributes = try? FileManager.default.attributesOfItem(atPath: node.path),
+           let device = (attributes[.systemNumber] as? NSNumber)?.uint64Value,
+           let inode = (attributes[.systemFileNumber] as? NSNumber)?.uint64Value {
+            return .filesystem(device: device, inode: inode)
+        }
+
+        let standardizedPath = URL(fileURLWithPath: node.path).standardized.path
+        let dataVolumePrefix = "/System/Volumes/Data"
+        let canonicalPath: String
+        if standardizedPath == dataVolumePrefix {
+            canonicalPath = "/"
+        } else if standardizedPath.hasPrefix(dataVolumePrefix + "/") {
+            canonicalPath = String(standardizedPath.dropFirst(dataVolumePrefix.count))
+        } else {
+            canonicalPath = standardizedPath
+        }
+        return .path(canonicalPath)
+    }
+
+    private static func shouldPrefer(_ candidate: FileNode, over existing: FileNode) -> Bool {
+        let candidateIsDataVolumePath = candidate.path.hasPrefix("/System/Volumes/Data/")
+        let existingIsDataVolumePath = existing.path.hasPrefix("/System/Volumes/Data/")
+        if candidateIsDataVolumePath != existingIsDataVolumePath {
+            return !candidateIsDataVolumePath
+        }
+        if candidate.path.count != existing.path.count {
+            return candidate.path.count < existing.path.count
+        }
+        return candidate.path < existing.path
     }
 }

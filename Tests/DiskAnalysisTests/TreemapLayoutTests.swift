@@ -123,4 +123,83 @@ struct TreemapLayoutTests {
         #expect(!FileNode.isProtectedPath("/System/Volumes/Data/Users/test/.cache"))
         #expect(!FileNode.isProtectedPath("/Users/test/.cache"))
     }
+
+    @Test("Disk report collapses filesystem aliases and prefers user-facing paths")
+    func testDiskReportDeduplicatesAliases() throws {
+        let fileManager = FileManager.default
+        let testDir = fileManager.temporaryDirectory.appendingPathComponent("DiskAnalysisAliases_\(UUID().uuidString)")
+        try fileManager.createDirectory(at: testDir, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: testDir) }
+
+        let hardLink = testDir.appendingPathComponent("hardlink.bin")
+        let hardLinkAlias = testDir.appendingPathComponent("hardlink-alias.bin")
+        try Data([1]).write(to: hardLink)
+        try fileManager.linkItem(at: hardLink, to: hardLinkAlias)
+
+        let dataVolumeAlias = FileNode(
+            name: "alias.bin",
+            url: URL(fileURLWithPath: "/System/Volumes/Data/Users/test/alias.bin"),
+            isDirectory: false,
+            logicalSize: 2_000_000_000,
+            physicalSize: 2_000_000_000
+        )
+        let userFacingPath = FileNode(
+            name: "alias.bin",
+            url: URL(fileURLWithPath: "/Users/test/alias.bin"),
+            isDirectory: false,
+            logicalSize: 2_000_000_000,
+            physicalSize: 2_000_000_000
+        )
+        let hardLinkNode = FileNode(
+            name: hardLink.lastPathComponent,
+            url: hardLink,
+            isDirectory: false,
+            logicalSize: 2_000_000_000,
+            physicalSize: 2_000_000_000
+        )
+        let hardLinkAliasNode = FileNode(
+            name: hardLinkAlias.lastPathComponent,
+            url: hardLinkAlias,
+            isDirectory: false,
+            logicalSize: 2_000_000_000,
+            physicalSize: 2_000_000_000
+        )
+        let dataVolumeCacheAlias = FileNode(
+            name: ".cache",
+            url: URL(fileURLWithPath: "/System/Volumes/Data/Users/test/.cache"),
+            isDirectory: true,
+            logicalSize: 2_000_000_000,
+            physicalSize: 2_000_000_000
+        )
+        let userFacingCachePath = FileNode(
+            name: ".cache",
+            url: URL(fileURLWithPath: "/Users/test/.cache"),
+            isDirectory: true,
+            logicalSize: 2_000_000_000,
+            physicalSize: 2_000_000_000
+        )
+        let root = FileNode(name: "Root", url: testDir, isDirectory: true)
+        root.children = [
+            dataVolumeAlias,
+            userFacingPath,
+            hardLinkNode,
+            hardLinkAliasNode,
+            dataVolumeCacheAlias,
+            userFacingCachePath
+        ]
+        for child in root.children {
+            child.parent = root
+        }
+        root.recalculateAggregates()
+
+        let report = DiskReport.build(from: root)
+
+        #expect(report.largeFiles.count == 2)
+        #expect(report.largeFiles.contains(where: { $0.path == userFacingPath.path }))
+        #expect(!report.largeFiles.contains(where: { $0.path == dataVolumeAlias.path }))
+        #expect(report.largeFiles.contains(where: { $0.path == hardLink.path }))
+        #expect(!report.largeFiles.contains(where: { $0.path == hardLinkAlias.path }))
+        #expect(report.cleanupCandidates.count == 1)
+        #expect(report.cleanupCandidates.first?.node.path == userFacingCachePath.path)
+    }
 }
