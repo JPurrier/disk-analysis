@@ -1,0 +1,20 @@
+# Swift & SPM
+.build/
+.swiftpm/
+.index-build/
+
+# macOS application bundles
+*.app
+*.dSYM
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor & IDE
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+*.swp
+*~
